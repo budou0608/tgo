@@ -129,14 +129,14 @@ const Text = ({ element }: ComponentRenderProps<JsonRenderProps>) => {
   return <div style={baseTextStyle}>{text}</div>
 }
 
-const Button = ({ element, children, emit }: ComponentRenderProps<JsonRenderProps>) => {
+const Button = ({ element, children, emit, loading }: ComponentRenderProps<JsonRenderProps>) => {
   const props = element.props
   const label = pickFirstString(props, ['label', 'text'], 'Submit')
   const variant = toStringValue(props.variant).toLowerCase()
   const primary = toBool(props.primary) || variant === 'primary'
   const danger = variant === 'danger'
   const link = variant === 'link'
-  const disabled = toBool(props.disabled)
+  const isDisabled = toBool(props.disabled) || loading
 
   const style: CSSProperties = link
     ? {
@@ -177,12 +177,12 @@ const Button = ({ element, children, emit }: ComponentRenderProps<JsonRenderProp
     <button
       type="button"
       onClick={() => {
-        if (!disabled) emit('press')
+        if (!isDisabled) emit('press')
       }}
-      disabled={disabled}
-      style={{ ...style, cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.6 : 1 }}
+      disabled={isDisabled}
+      style={{ ...style, cursor: isDisabled ? 'not-allowed' : 'pointer', opacity: isDisabled ? 0.6 : 1 }}
     >
-      {children ?? label}
+      {loading ? 'Loading...' : (children ?? label)}
     </button>
   )
 }
@@ -375,9 +375,12 @@ const Input = ({ element, bindings }: ComponentRenderProps<JsonRenderProps>) => 
   )
 }
 
-const Checkbox = ({ element, bindings }: ComponentRenderProps<JsonRenderProps>) => {
+const Checkbox = ({ element, bindings }: ComponentRenderProps<Record<string, unknown>>) => {
   const props = element.props
-  const [value, setValue] = useBoundProp<boolean | undefined>(toBool(props.value), bindings?.value)
+  // Accept value, checked, or selected as the bound prop
+  const rawValue = props.value ?? props.checked ?? props.selected
+  const bindingPath = bindings?.value ?? bindings?.checked ?? bindings?.selected
+  const [value, setValue] = useBoundProp<boolean | undefined>(toBool(rawValue), bindingPath)
   const label = toStringValue(props.label) || toStringValue(props.text)
 
   return (
@@ -388,12 +391,18 @@ const Checkbox = ({ element, bindings }: ComponentRenderProps<JsonRenderProps>) 
   )
 }
 
-const DateTimeInput = ({ element, bindings }: ComponentRenderProps<JsonRenderProps>) => {
+const DateTimeInput = ({ element, bindings }: ComponentRenderProps<Record<string, unknown>>) => {
   const props = element.props
-  const [value, setValue] = useBoundProp<string | undefined>(toStringValue(props.value), bindings?.value)
+  // Accept value, date, or selectedDate as the bound prop
+  const rawValue = props.value ?? props.date ?? props.selectedDate
+  const bindingPath = bindings?.value ?? bindings?.date ?? bindings?.selectedDate
+  const [value, setValue] = useBoundProp<string | undefined>(toStringValue(rawValue), bindingPath)
   const label = toStringValue(props.label)
-  const enableDate = props.enableDate !== false
-  const enableTime = props.enableTime !== false
+
+  // Respect mode prop (date/time/datetime) as well as enableDate/enableTime
+  const mode = toStringValue(props.mode).toLowerCase() || toStringValue(props.type).toLowerCase()
+  const enableDate = mode ? mode !== 'time' : props.enableDate !== false
+  const enableTime = mode ? (mode === 'time' || mode === 'datetime' || mode === 'datetime-local') : props.enableTime !== false
   const type = enableDate && enableTime ? 'datetime-local' : enableDate ? 'date' : 'time'
 
   return (
@@ -409,21 +418,29 @@ const DateTimeInput = ({ element, bindings }: ComponentRenderProps<JsonRenderPro
   )
 }
 
-const MultipleChoice = ({ element, bindings }: ComponentRenderProps<JsonRenderProps>) => {
+const MultipleChoice = ({ element, bindings }: ComponentRenderProps<Record<string, unknown>>) => {
   const props = element.props
   const rawOptions = Array.isArray(props.options) ? props.options : []
   const options = rawOptions
     .map((item: unknown) => {
-      if (!item || typeof item !== 'object' || Array.isArray(item)) return null
-      const option = item as Record<string, unknown>
+      // Handle string shorthand: "身份证" → { label: "身份证", value: "身份证" }
+      if (typeof item === 'string') {
+        return item ? { label: item, value: item } : null
+      }
+      if (typeof item !== 'object' || item === null) return null
+      const obj = item as Record<string, unknown>
       return {
-        label: toStringValue(option.label),
-        value: toStringValue(option.value),
+        label: toStringValue(obj.label),
+        value: toStringValue(obj.value),
       }
     })
-    .filter((item): item is { label: string; value: string } => Boolean(item && item.value.length > 0))
+    .filter((item: { label: string; value: string } | null): item is { label: string; value: string } => item !== null && item.value.length > 0)
 
-  const [value, setValue] = useBoundProp<string | undefined>(toStringValue(props.value), bindings?.value)
+  // Accept value, selectedValue, or selectedValues as the bound prop
+  const rawValue = props.value ?? props.selectedValue ?? props.selectedValues
+  const initialValue = Array.isArray(rawValue) ? toStringValue(rawValue[0]) : toStringValue(rawValue)
+  const bindingPath = bindings?.value ?? bindings?.selectedValue ?? bindings?.selectedValues
+  const [value, setValue] = useBoundProp<string | undefined>(initialValue, bindingPath)
   const label = toStringValue(props.label)
 
   return (

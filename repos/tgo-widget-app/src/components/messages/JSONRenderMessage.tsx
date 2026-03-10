@@ -44,16 +44,19 @@ function groupParts(parts: DataPart[]): PartGroup[] {
 }
 
 // Sub-component: render a consecutive group of spec DataParts
-function JSONRenderGroup({ parts, onAction }: { parts: DataPart[]; onAction?: (name: string, ctx: Record<string, unknown>) => Promise<void> | void }) {
+function JSONRenderGroup({ parts, loading, onAction }: { parts: DataPart[]; loading?: boolean; onAction?: (name: string, ctx: Record<string, unknown>) => Promise<void> | void }) {
   const { spec } = useJsonRenderMessage(parts)
   if (!spec) return null
-  return <JSONRenderSurface spec={spec} onAction={onAction} />
+  return <JSONRenderSurface spec={spec} loading={loading} onAction={onAction} />
 }
 
 export default function JSONRenderMessage({ message, onSendMessage, onAction, showCursor = false }: JSONRenderMessageProps) {
   const uiParts = useMemo(() => {
     return Array.isArray(message.uiParts) ? (message.uiParts as DataPart[]) : []
   }, [message.uiParts])
+
+  // Suppress "Missing element" warnings while the stream is still delivering patches
+  const loading = showCursor
 
   const groups = useMemo(() => groupParts(uiParts), [uiParts])
 
@@ -83,7 +86,7 @@ export default function JSONRenderMessage({ message, onSendMessage, onAction, sh
               </div>
             )
           }
-          return <JSONRenderGroup key={i} parts={group.parts} onAction={onAction} />
+          return <JSONRenderGroup key={i} parts={group.parts} loading={loading} onAction={onAction} />
         })
       ) : (
         fallbackText ? (
