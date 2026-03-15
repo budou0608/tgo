@@ -1,45 +1,69 @@
-# tgo-docs
+# TGO 文档网站
 
-This is a Next.js application generated with
-[Create Fumadocs](https://github.com/fuma-nama/fumadocs).
+基于 [Fumadocs](https://fumadocs.dev) 构建的多语言文档网站，支持中文和英文。
 
-Run development server:
+## 快速开始
 
 ```bash
-npm run dev
-# or
+# 安装依赖
+pnpm install
+
+# 启动开发服务器
 pnpm dev
-# or
-yarn dev
 ```
 
-Open http://localhost:3000 with your browser to see the result.
+访问 http://localhost:3000 查看网站。
 
-## Explore
+## 项目结构
 
-In the project, you can see:
+```
+website/
+├── content/docs/          # 文档内容 (MDX)
+│   ├── zh/               # 中文文档
+│   └── en/               # 英文文档
+├── src/
+│   ├── app/              # Next.js App Router 页面
+│   │   ├── [lang]/       # 语言路由
+│   │   └── api/          # API 路由
+│   ├── lib/              # 工具库
+│   │   ├── i18n.ts       # 国际化配置
+│   │   └── source.ts     # 文档源配置
+│   ├── components/       # React 组件
+│   └── middleware.ts     # 国际化中间件
+├── source.config.ts      # Fumadocs 配置
+└── next.config.mjs       # Next.js 配置
+```
 
-- `lib/source.ts`: Code for content source adapter, [`loader()`](https://fumadocs.dev/docs/headless/source-api) provides the interface to access your content.
-- `lib/layout.shared.tsx`: Shared options for layouts, optional but preferred to keep.
+## 主要功能
 
-| Route                     | Description                                            |
-| ------------------------- | ------------------------------------------------------ |
-| `app/(home)`              | The route group for your landing page and other pages. |
-| `app/docs`                | The documentation layout and pages.                    |
-| `app/api/search/route.ts` | The Route Handler for search.                          |
+- **多语言支持**: 中文 (zh) / 英文 (en)，通过 middleware 自动重定向
+- **MDX 文档**: 支持 MDX 格式编写文档
+- **OpenAPI 集成**: 支持从 OpenAPI 规范生成 API 文档
+- **全文搜索**: 基于 Orama 的本地搜索
 
-### Fumadocs MDX
+## 可用脚本
 
-A `source.config.ts` config file has been included, you can customise different options like frontmatter schema.
+| 命令 | 说明 |
+|------|------|
+| `pnpm dev` | 启动开发服务器 |
+| `pnpm build` | 构建生产版本 |
+| `pnpm build:docs` | 生成文档 |
+| `pnpm lint` | 代码检查 |
+| `pnpm format` | 代码格式化 |
 
-Read the [Introduction](https://fumadocs.dev/docs/mdx) for further details.
+## 添加新文档
 
-## Learn More
+1. 在 `content/docs/[lang]/` 下创建 `.md` 或 `.mdx` 文件
+2. 添加必要的 frontmatter：
 
-To learn more about Next.js and Fumadocs, take a look at the following
-resources:
+```mdx
+---
+title: 文档标题
+description: 文档描述
+---
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js
-  features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-- [Fumadocs](https://fumadocs.dev) - learn about Fumadocs
+## 了解更多
+
+- [Fumadocs 文档](https://fumadocs.dev/docs/mdx)
+- [Next.js 文档](https://nextjs.org/docs)
