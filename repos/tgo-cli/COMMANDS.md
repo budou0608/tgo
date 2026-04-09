@@ -46,7 +46,7 @@ Source: `src/commands/chat.ts`
 | Command | Description | Options / Arguments |
 |---------|-------------|---------------------|
 | `tgo chat send` | Send message via WuKongIM WebSocket | `--channel <id>` (required), `--type <n>` (required), `--message <text>` (required) |
-| `tgo chat team` | Chat with AI team or agent | `--message <text>` (required), `--agent <id>`, `--team <id>` |
+| `tgo chat agent` | Chat with AI agent | `--message <text>` (required), `--agent <id>` (required) |
 | `tgo chat clear-memory` | Clear AI memory for a channel | `--channel <id>` (required), `--type <n>` (required) |
 | `tgo chat listen` | Listen for incoming messages (JSONL) | `--channel <id>`, `--events` |
 
@@ -176,7 +176,7 @@ Each tool is named `tgo_<resource>_<action>` and maps to the corresponding CLI c
 | `tgo_conversation_waiting_count` | Get waiting queue count | — |
 | `tgo_chat_send` | Send message via WuKongIM WebSocket | `channel_id`, `channel_type` (number), `message` |
 | `tgo_chat_send_platform` | Send message via HTTP API (non-website) | `channel_id`, `channel_type` (number), `message` |
-| `tgo_chat_team` | Chat with AI team or agent | `message`, `agent_id?`, `team_id?` |
+| `tgo_chat_agent` | Chat with AI agent | `message`, `agent_id` |
 | `tgo_chat_clear_memory` | Clear AI memory for a channel | `channel_id`, `channel_type` (number) |
 | `tgo_visitor_list` | List visitors with filtering | `is_online?`, `search?`, `tag_ids?`, `platform_id?`, `limit`, `offset` |
 | `tgo_visitor_get` | Get visitor details | `id` (string) |

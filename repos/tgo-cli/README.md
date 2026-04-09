@@ -85,7 +85,7 @@ tgo conversation waiting-count
 
 ```bash
 tgo chat send --channel <id> --type <N> --message <text>
-tgo chat team --message <text> [--agent <id>] [--team <id>]
+tgo chat agent --message <text> --agent <id>
 tgo chat clear-memory --channel <id> --type <N>
 ```
 
@@ -225,7 +225,7 @@ tgo mcp serve
 | `tgo_conversation_close` | 关闭会话 |
 | `tgo_conversation_waiting_count` | 等待数量 |
 | `tgo_chat_send` | 发送消息 |
-| `tgo_chat_team` | 与 AI 对话 |
+| `tgo_chat_agent` | 与 AI Agent 对话 |
 | `tgo_chat_clear_memory` | 清除 AI 记忆 |
 | `tgo_visitor_list` | 访客列表 |
 | `tgo_visitor_get` | 访客详情 |

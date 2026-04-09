@@ -15,7 +15,7 @@ import {
   conversationWaitingCount,
 } from '../commands/conversation.js';
 // Chat
-import { chatSend, chatSendPlatform, chatTeam, chatClearMemory } from '../commands/chat.js';
+import { chatSend, chatSendPlatform, chatAgent, chatClearMemory } from '../commands/chat.js';
 // Visitor
 import {
   visitorList,
@@ -182,14 +182,13 @@ export async function startMcpServer(): Promise<void> {
   );
 
   server.tool(
-    'tgo_chat_team',
-    'Chat with an AI team or agent',
+    'tgo_chat_agent',
+    'Chat with an AI agent',
     {
       message: z.string().describe('Message text'),
-      agent_id: z.string().optional().describe('AI Agent ID'),
-      team_id: z.string().optional().describe('AI Team ID'),
+      agent_id: z.string().describe('AI Agent ID'),
     },
-    async (params) => text(await chatTeam(getClient(), params)),
+    async (params) => text(await chatAgent(getClient(), params)),
   );
 
   server.tool(

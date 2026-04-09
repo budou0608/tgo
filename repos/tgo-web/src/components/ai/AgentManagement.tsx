@@ -5,17 +5,16 @@ import AgentCard from './AgentCard';
 import CreateAgentModal from './CreateAgentModal';
 import EditAgentModal from './EditAgentModal';
 import AgentStoreModal from './AgentStoreModal';
-import TeamInfoModal from './TeamInfoModal';
 import ToolToastProvider from './ToolToastProvider';
 // import AiToolDetailModal from '@/components/ui/AiToolDetailModal';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import { AgentsGridSkeleton, AgentsErrorState, AgentsEmptyState } from '@/components/ui/AgentsSkeleton';
 import { useAIStore } from '@/stores';
 import { useToast } from '@/hooks/useToast';
-import { LuPlus, LuChevronLeft, LuChevronRight, LuUsers, LuSearch, LuRefreshCw, LuStore } from 'react-icons/lu';
+import { LuPlus, LuChevronLeft, LuChevronRight, LuSearch, LuRefreshCw, LuStore } from 'react-icons/lu';
 import { Bot } from 'lucide-react';
-import type { Agent, AgentToolResponse } from '@/types';
-import { aiTeamsApiService, TeamWithDetailsResponse } from '@/services/aiTeamsApi';
+import type { Agent, AgentToolResponse, AgentWithDetailsResponse } from '@/types';
+import { AIAgentsApiService } from '@/services/aiAgentsApi';
 
 /**
  * Agent management page component
@@ -56,33 +55,32 @@ const AgentManagement: React.FC = () => {
   const [showEditAgent, setShowEditAgent] = useState(false);
   const [showAgentStore, setShowAgentStore] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [showTeamInfo, setShowTeamInfo] = useState(false);
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Team state
-  const [defaultTeam, setDefaultTeam] = useState<TeamWithDetailsResponse | null>(null);
-  const [isLoadingTeam, setIsLoadingTeam] = useState(false);
+  // Default agent state
+  const [defaultAgent, setDefaultAgent] = useState<AgentWithDetailsResponse | null>(null);
+  const [isLoadingDefaultAgent, setIsLoadingDefaultAgent] = useState(false);
 
   // Track if agents have been loaded to prevent multiple API calls
   const hasLoadedAgents = useRef(false);
-  const hasLoadedTeam = useRef(false);
+  const hasLoadedDefaultAgent = useRef(false);
 
-  // Load default team info
-  const loadDefaultTeam = useCallback(async () => {
-    if (hasLoadedTeam.current) return;
-    setIsLoadingTeam(true);
+  // Load default agent info
+  const loadDefaultAgent = useCallback(async () => {
+    if (hasLoadedDefaultAgent.current) return;
+    setIsLoadingDefaultAgent(true);
     try {
-      hasLoadedTeam.current = true;
-      const teamData = await aiTeamsApiService.getDefaultTeam(false);
-      setDefaultTeam(teamData);
+      hasLoadedDefaultAgent.current = true;
+      const response = await AIAgentsApiService.getDefaultAgents({ limit: 1, offset: 0 });
+      setDefaultAgent(response.data[0] ?? null);
     } catch (error) {
-      hasLoadedTeam.current = false;
-      console.error('Failed to load default team:', error);
+      hasLoadedDefaultAgent.current = false;
+      console.error('Failed to load default agent:', error);
     } finally {
-      setIsLoadingTeam(false);
+      setIsLoadingDefaultAgent(false);
     }
   }, []);
 
@@ -107,8 +105,8 @@ const AgentManagement: React.FC = () => {
     };
 
     loadInitialAgents();
-    loadDefaultTeam();
-  }, [loadDefaultTeam]);
+    loadDefaultAgent();
+  }, [loadDefaultAgent]);
 
   const handleRefresh = async (silent = false) => {
     setIsRefreshing(true);
@@ -143,39 +141,22 @@ const AgentManagement: React.FC = () => {
     setShowCreateAgentModal(true);
   };
 
-  const handleOpenTeamInfo = (): void => {
-    setShowTeamInfo(true);
-  };
-
-  const handleChatWithTeam = (): void => {
-    if (!defaultTeam) {
+  const handleChatWithDefaultAgent = (): void => {
+    if (!defaultAgent) {
       showError(
-        t('agents.messages.noTeam', '团队未加载'),
-        t('agents.messages.noTeamDesc', '请稍后重试')
+        t('agents.messages.noDefaultAgent', '默认AI员工未加载'),
+        t('agents.messages.noDefaultAgentDesc', '请稍后重试')
       );
       return;
     }
-    if (agents.length === 0) {
-      showError(
-        t('agents.messages.noAgentsForTeamChat', '无法发起团队对话'),
-        t('agents.messages.noAgentsForTeamChatDesc', '请先创建至少一个AI员工')
-      );
-      return;
-    }
-    const channelId = `${defaultTeam.id}-team`;
+    const channelId = `${defaultAgent.id}-agent`;
     navigate(`/chat/1/${channelId}`, {
       state: {
-        agentName: defaultTeam.name || t('agents.teamChat.defaultName', 'AI员工团队'),
-        platform: 'team'
+        agentName: defaultAgent.name || t('agents.defaultAgent.defaultName', '默认AI员工'),
+        platform: 'agent'
       }
     });
   };
-
-  const handleTeamUpdated = useCallback(async () => {
-    // Refresh team data after update
-    hasLoadedTeam.current = false;
-    await loadDefaultTeam();
-  }, [loadDefaultTeam]);
 
   // Handle retry on error
   const handleRetry = useCallback(async (): Promise<void> => {
@@ -352,31 +333,25 @@ const AgentManagement: React.FC = () => {
       <div className="flex-1 overflow-y-auto custom-scrollbar">
         <div className="max-w-[1600px] mx-auto p-8 space-y-8">
           
-          {/* Quick Actions / Team Info */}
+          {/* Quick Actions / Default Agent */}
           <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-3xl p-6 text-white shadow-xl shadow-blue-200 dark:shadow-none flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden">
             <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
             <div className="relative z-10">
               <h3 className="text-xl font-bold flex items-center gap-2">
-                <LuUsers className="w-6 h-6" />
-                {defaultTeam?.name || t('agents.teamChat.defaultName', 'AI员工团队')}
+                <Bot className="w-6 h-6" />
+                {defaultAgent?.name || t('agents.defaultAgent.defaultName', '默认AI员工')}
               </h3>
               <p className="text-blue-100 text-sm mt-1 opacity-90 max-w-xl">
-                {defaultTeam?.instruction || t('agents.teamDescription', '通过团队协作，您可以同时调用多个具备工具调用、工作流执行及知识库检索能力的AI员工，实现更复杂的业务逻辑和更高效的任务处理。')}
+                {defaultAgent?.instruction || t('agents.defaultAgent.description', '项目默认AI员工会在未显式指定目标时承接 AI 对话。')}
               </p>
             </div>
             <div className="flex items-center gap-3 relative z-10">
               <button
-                onClick={handleOpenTeamInfo}
-                className="px-5 py-2.5 bg-white/10 hover:bg-white/20 backdrop-blur-md text-white text-sm font-bold rounded-xl transition-all border border-white/20"
-              >
-                {t('agents.actions.teamInfo', '团队信息')}
-              </button>
-              <button
-                onClick={handleChatWithTeam}
-                disabled={!defaultTeam || isLoadingTeam || agents.length === 0}
+                onClick={handleChatWithDefaultAgent}
+                disabled={!defaultAgent || isLoadingDefaultAgent}
                 className="px-5 py-2.5 bg-white text-blue-600 hover:bg-blue-50 text-sm font-bold rounded-xl transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {t('agents.actions.teamChat', '发起团队对话')}
+                {t('agents.actions.defaultAgentChat', '与默认AI员工对话')}
               </button>
             </div>
           </div>
@@ -461,7 +436,6 @@ const AgentManagement: React.FC = () => {
 
       {/* Modals */}
       <CreateAgentModal />
-      <TeamInfoModal isOpen={showTeamInfo} onClose={() => setShowTeamInfo(false)} team={defaultTeam} onTeamUpdated={handleTeamUpdated} />
       <EditAgentModal agentId={selectedAgent?.id || null} isOpen={showEditAgent} onClose={() => setShowEditAgent(false)} />
       
       <ToolToastProvider>

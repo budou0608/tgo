@@ -110,13 +110,12 @@ const ChatWindow: React.FC<ChatWindowProps> = React.memo(({ activeChat, onSendMe
     onSendMessage?.(suggestion);
   }, [onSendMessage]);
 
-  // Check if current chat is an agent chat or team chat
+  // Check if current chat is an agent chat
   const isAgentChat = channelId?.endsWith('-agent') ?? false;
-  const isTeamChat = channelId?.endsWith('-team') ?? false;
-  const isAIChat = isAgentChat || isTeamChat;
+  const isAIChat = isAgentChat;
 
   // Enhanced message sending with platform-aware flow (REST first for non-website, then WebSocket)
-  // For agent/team chats, use REST API instead of WebSocket
+  // For agent chats, use REST API instead of WebSocket
   const handleSendMessage = useCallback(async (message: string): Promise<void> => {
     if (!message.trim()) {
       console.warn('Cannot send empty message');
@@ -132,35 +131,25 @@ const ChatWindow: React.FC<ChatWindowProps> = React.memo(({ activeChat, onSendMe
           timestamp: Date.now(),
         };
 
-        // Agent/Team chat: use REST API (/v1/chat/team) instead of WebSocket
+        // Agent chat: use REST API (/v1/chat/agent) instead of WebSocket
         // Don't add local message - rely on WebSocket to receive the message back
         // This prevents duplicate messages in the UI
         if (isAIChat) {
           try {
-            let response;
-            if (isAgentChat) {
-              // Extract agent_id from channelId (format: {agent_id}-agent)
-              const agentId = channelId.replace(/-agent$/, '');
-              response = await chatMessagesApiService.staffTeamChat({
-                agent_id: agentId,
-                message: message.trim(),
-              });
-            } else {
-              // Extract team_id from channelId (format: {team_id}-team)
-              const teamId = channelId.replace(/-team$/, '');
-              response = await chatMessagesApiService.staffTeamChat({
-                team_id: teamId,
-                message: message.trim(),
-              });
-            }
+            // Extract agent_id from channelId (format: {agent_id}-agent)
+            const agentId = channelId.replace(/-agent$/, '');
+            const response = await chatMessagesApiService.staffAgentChat({
+              agent_id: agentId,
+              message: message.trim(),
+            });
             console.log('🤖 AI Chat: Message sent successfully via REST API', {
               channelId,
               clientMsgNo: response.client_msg_no
             });
             onSendMessage?.(message);
           } catch (e: any) {
-            const errorKey = isAgentChat ? 'chat.send.agentErrorLog' : 'chat.send.teamErrorLog';
-            const errorDefault = isAgentChat ? 'AI员工消息发送失败' : '团队消息发送失败';
+            const errorKey = 'chat.send.agentErrorLog';
+            const errorDefault = 'AI员工消息发送失败';
             console.error(t(errorKey, errorDefault), e);
             showApiError(showToast, e);
           }

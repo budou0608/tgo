@@ -1,3 +1,4 @@
+import { Command } from 'commander';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { TgoClient } from '../client.js';
 
@@ -93,26 +94,32 @@ describe('chat commands', () => {
     });
   });
 
-  describe('chatTeam', () => {
-    it('should POST to /v1/chat/team with agent_id', async () => {
-      const { chatTeam } = await import('./chat.js');
+  describe('registerChatCommands', () => {
+    it('should register chat agent and remove legacy chat team command', async () => {
+      const { registerChatCommands } = await import('./chat.js');
       const client = mockClient();
-      await chatTeam(client, { message: 'Hi', agent_id: 'agent-1' });
-      expect(client.post).toHaveBeenCalledWith('/v1/chat/team', {
+
+      const program = new Command();
+      program.option('--server <url>').option('--token <token>');
+      const root = program.command('root');
+
+      registerChatCommands(root);
+
+      const chat = root.commands.find((cmd) => cmd.name() === 'chat');
+      expect(chat?.commands.some((cmd) => cmd.name() === 'agent')).toBe(true);
+      expect(chat?.commands.some((cmd) => cmd.name() === 'team')).toBe(false);
+      expect(client.post).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('chatAgent', () => {
+    it('should POST to /v1/chat/agent with agent_id', async () => {
+      const { chatAgent } = await import('./chat.js');
+      const client = mockClient();
+      await chatAgent(client, { message: 'Hi', agent_id: 'agent-1' });
+      expect(client.post).toHaveBeenCalledWith('/v1/chat/agent', {
         message: 'Hi',
         agent_id: 'agent-1',
-        team_id: null,
-      });
-    });
-
-    it('should POST to /v1/chat/team with team_id', async () => {
-      const { chatTeam } = await import('./chat.js');
-      const client = mockClient();
-      await chatTeam(client, { message: 'Hi', team_id: 'team-1' });
-      expect(client.post).toHaveBeenCalledWith('/v1/chat/team', {
-        message: 'Hi',
-        agent_id: null,
-        team_id: 'team-1',
       });
     });
   });

@@ -42,20 +42,18 @@ export function registerChatCommands(parent: Command): void {
     });
 
   chat
-    .command('team')
-    .description('Chat with AI team or agent')
+    .command('agent')
+    .description('Chat with AI agent')
     .requiredOption('--message <text>', 'Message')
-    .option('--agent <id>', 'Agent ID')
-    .option('--team <id>', 'Team ID')
+    .requiredOption('--agent <id>', 'Agent ID')
     .action(async (opts, cmd) => {
       const globals = cmd.parent!.parent!.opts();
       const format = resolveOutput(globals.output);
       try {
         const client = makeClient(globals);
-        const result = await chatTeam(client, {
+        const result = await chatAgent(client, {
           message: opts.message,
           agent_id: opts.agent,
-          team_id: opts.team,
         });
         printResult(result, format);
       } catch (err) {
@@ -151,14 +149,13 @@ export async function chatSendPlatform(
   });
 }
 
-export async function chatTeam(
+export async function chatAgent(
   client: TgoClient,
-  params: { message: string; agent_id?: string; team_id?: string },
+  params: { message: string; agent_id: string },
 ): Promise<unknown> {
-  return client.post('/v1/chat/team', {
+  return client.post('/v1/chat/agent', {
     message: params.message,
-    agent_id: params.agent_id || null,
-    team_id: params.team_id || null,
+    agent_id: params.agent_id,
   });
 }
 
