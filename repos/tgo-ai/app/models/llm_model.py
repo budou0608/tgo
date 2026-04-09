@@ -8,6 +8,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Optional, TYPE_CHECKING
 
+from sqlalchemy import JSON as SAJSON
 from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -67,7 +68,7 @@ class LLMModel(BaseModel):
     )
 
     capabilities: Mapped[Optional[dict]] = mapped_column(
-        JSONB, 
+        JSONB().with_variant(SAJSON(), "sqlite"),
         nullable=True, 
         comment="Model capabilities JSON, e.g., {vision: true, function_calling: true}"
     )
