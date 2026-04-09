@@ -37,13 +37,8 @@ class AgentService:
             Created agent
 
         Raises:
-            NotFoundError: If team not found
-            ValidationError: If team belongs to different project or tools not found
+            ValidationError: If tools not found
         """
-        # Validate team if provided
-        if agent_data.team_id:
-            await self._validate_team_belongs_to_project(agent_data.team_id, project_id)
-
         # Validate tools if provided
         if agent_data.tools:
             tool_ids = [tool.tool_id for tool in agent_data.tools]
@@ -52,7 +47,6 @@ class AgentService:
         # Create agent
         agent = Agent(
             project_id=project_id,
-            team_id=agent_data.team_id,
             llm_provider_id=agent_data.llm_provider_id,
             name=agent_data.name,
             instruction=agent_data.instruction,
@@ -67,6 +61,9 @@ class AgentService:
 
         self.db.add(agent)
         await self.db.flush()  # Get agent ID
+
+        if agent.is_default:
+            await self._replace_project_default_agent(project_id, agent.id)
 
         # Create tool associations (many-to-many)
         if agent_data.tools:
@@ -122,7 +119,6 @@ class AgentService:
                 selectinload(Agent.tools),
                 selectinload(Agent.collections),
                 selectinload(Agent.workflows),
-                selectinload(Agent.team),
                 selectinload(Agent.llm_provider),
             )
             .where(
@@ -148,7 +144,6 @@ class AgentService:
     async def list_agents(
         self,
         project_id: uuid.UUID,
-        team_id: Optional[uuid.UUID] = None,
         model: Optional[str] = None,
         is_default: Optional[bool] = None,
         limit: int = 20,
@@ -159,7 +154,6 @@ class AgentService:
 
         Args:
             project_id: Project ID
-            team_id: Filter by team ID
             model: Filter by model
             is_default: Filter by default status
             limit: Number of agents to return
@@ -174,8 +168,6 @@ class AgentService:
             Agent.deleted_at.is_(None),
         ]
 
-        if team_id is not None:
-            conditions.append(Agent.team_id == team_id)
         if model is not None:
             conditions.append(Agent.model == model)
         if is_default is not None:
@@ -193,7 +185,6 @@ class AgentService:
                 selectinload(Agent.tools),
                 selectinload(Agent.collections),
                 selectinload(Agent.workflows),
-                selectinload(Agent.team),
                 selectinload(Agent.llm_provider),
             )
             .where(and_(*conditions))
@@ -226,15 +217,10 @@ class AgentService:
             Updated agent
 
         Raises:
-            NotFoundError: If agent or team not found
-            ValidationError: If team belongs to different project
+            NotFoundError: If agent not found
         """
         # Get existing agent
         agent = await self.get_agent(project_id, agent_id)
-
-        # Validate team if provided
-        if agent_data.team_id is not None:
-            await self._validate_team_belongs_to_project(agent_data.team_id, project_id)
 
         # Validate collections if provided
         if agent_data.collections is not None:
@@ -253,6 +239,9 @@ class AgentService:
         update_data = agent_data.model_dump(exclude_unset=True, exclude={"tools", "collections", "workflows"})
         for field, value in update_data.items():
             setattr(agent, field, value)
+
+        if agent_data.is_default is True:
+            await self._replace_project_default_agent(project_id, agent.id)
 
         # Update tools if provided
         if agent_data.tools is not None:
@@ -312,6 +301,22 @@ class AgentService:
         await self.db.commit()
         await self.db.refresh(agent)
         return agent
+
+    async def get_default_agent(self, project_id: uuid.UUID) -> Agent:
+        """Get the current default agent for a project."""
+
+        agents, _ = await self.list_agents(
+            project_id=project_id,
+            is_default=True,
+            limit=1,
+            offset=0,
+        )
+        if not agents:
+            raise NotFoundError(
+                "Default agent",
+                details={"project_id": str(project_id)},
+            )
+        return agents[0]
 
     async def delete_agent(self, project_id: uuid.UUID, agent_id: uuid.UUID) -> None:
         """
@@ -481,6 +486,25 @@ class AgentService:
                 "team_id",
                 {"team_project_id": str(team.project_id), "expected_project_id": str(project_id)},
             )
+
+    async def _replace_project_default_agent(
+        self,
+        project_id: uuid.UUID,
+        new_default_agent_id: uuid.UUID,
+    ) -> None:
+        """Clear any other default agent before setting the requested default."""
+
+        stmt = select(Agent).where(
+            and_(
+                Agent.project_id == project_id,
+                Agent.deleted_at.is_(None),
+            )
+        )
+        result = await self.db.execute(stmt)
+        project_agents = result.scalars().all()
+
+        for project_agent in project_agents:
+            project_agent.is_default = project_agent.id == new_default_agent_id
 
     async def _validate_collections_belong_to_project(
         self, collection_ids: List[str], project_id: uuid.UUID

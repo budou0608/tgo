@@ -344,7 +344,6 @@ async def clear_session_memory(
     responses=build_error_responses([]),
 )
 async def list_agents(
-    team_id: Optional[uuid.UUID] = Query(default=None, description="Filter by team ID"),
     model: Optional[str] = Query(default=None, description="Filter by model (provider:model_name, e.g., openai:gpt-4)"),
     is_default: Optional[bool] = Query(default=None, description="Filter by default agent status"),
     pagination: tuple[int, int] = Depends(get_pagination_params),
@@ -357,7 +356,6 @@ async def list_agents(
     Returns detailed agent information including associated tools and collections.
 
     **Filtering Options:**
-    - Filter by team association
     - Filter by LLM model (provider:model_name format)
     - Filter by default agent status
     - Pagination with configurable limits
@@ -366,15 +364,12 @@ async def list_agents(
     - Each agent includes basic information (id, name, model, etc.)
     - Associated tools with their configurations and permissions
     - Associated collections with their metadata
-    - Team information if agent is associated with a team
-
     **Project Scope:**
     - Only agents belonging to the specified project_id are returned
     """
     limit, offset = pagination
     agents, total_count = await agent_service.list_agents(
         project_id=project_id,
-        team_id=team_id,
         model=model,
         is_default=is_default,
         limit=limit,
@@ -414,7 +409,6 @@ async def create_agent(
     - Specify LLM model in "provider:model_name" format
     - Configure system instruction and behavior
     - Bind tools with specific permissions and configurations
-    - Associate with teams for organization
     - Set default agent status (only one per project)
 
     **Tool Integration:**
@@ -470,7 +464,6 @@ async def update_agent(
 
     **Update Capabilities:**
     - Modify agent name, instruction, and model
-    - Update team association
     - Reconfigure tool bindings
     - Change default agent status
     - Update agent-specific configuration

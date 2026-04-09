@@ -110,13 +110,11 @@ class AgentBase(BaseSchema):
 class AgentCreate(AgentBase):
     """Schema for creating a new agent."""
 
-    team_id: Optional[uuid.UUID] = Field(
-        default=None,
-        description="Team ID to associate the agent with (optional)",
-    )
+    model_config = ConfigDict(extra="forbid")
+
     llm_provider_id: Optional[uuid.UUID] = Field(
         default=None,
-        description="LLM provider (credentials) ID to use for this agent; overrides team-level provider if set",
+        description="LLM provider (credentials) ID to use for this agent",
     )
     tools: Optional[List[AgentToolCreate]] = Field(
         default_factory=list,
@@ -148,18 +146,16 @@ class AgentCreate(AgentBase):
 class AgentUpdate(BaseSchema):
     """Schema for updating an existing agent."""
 
+    model_config = ConfigDict(extra="forbid")
+
     name: Optional[str] = Field(
         default=None,
         max_length=255,
         description="Updated agent name",
     )
-    team_id: Optional[uuid.UUID] = Field(
-        default=None,
-        description="Updated team ID (set to null to remove from team)",
-    )
     llm_provider_id: Optional[uuid.UUID] = Field(
         default=None,
-        description="Updated LLM provider (credentials) ID (set to null to inherit from team)",
+        description="Updated LLM provider (credentials) ID",
     )
     instruction: Optional[str] = Field(
         default=None,
@@ -234,10 +230,6 @@ class AgentUpdate(BaseSchema):
 class AgentResponse(AgentBase, IDMixin, TimestampMixin):
     """Schema for agent API responses."""
 
-    team_id: Optional[uuid.UUID] = Field(
-        default=None,
-        description="Associated team ID",
-    )
     llm_provider_id: Optional[uuid.UUID] = Field(
         default=None,
         description="Associated LLM provider (credentials) ID",
